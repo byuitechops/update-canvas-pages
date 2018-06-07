@@ -1,0 +1,26 @@
+{
+  "name": "update-canvas-pages",
+  "version": "1.0.0",
+  "description": "",
+  "main": "setUp.js",
+  "dependencies": {
+    "canvas-api-wrapper": "^3.2.1",
+    "chalk": "^2.4.1",
+    "enquirer": "^1.0.3",
+    "fs": "^0.0.1-security"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/byuitechops/update-canvas-pages.git"
+  },
+  "author": "Theron Dowdle",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/byuitechops/update-canvas-pages/issues"
+  },
+  "homepage": "https://github.com/byuitechops/update-canvas-pages#readme"
+}

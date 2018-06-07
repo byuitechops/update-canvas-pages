@@ -3,22 +3,40 @@ const enquirer = new Enquirer();
 const fs = require('fs');
 
 function setUp() {
-    let questions = [{
-        name: 'API_Key',
-        type: 'input',
-        message: 'What is your API Key?'
-    },
-    {
-        name: 'path',
-        type: 'input',
-        message: 'Where will the course to be saved?'
-    }]
+    return new Promise((resolve, reject) => {
+        let questions = [{
+            name: 'API_Key',
+            type: 'input',
+            message: 'What is your API Key?',
+        },
+        {
+            name: 'path',
+            type: 'input',
+            message: 'Where will the course to be saved?',
+            default: `/documents/courses`
+        }]
 
-    enquirer.ask(questions)
-        .then(answers => {
-            let key = answers.API_Key;
-            let path = answers.path;
-        })
-        .catch(console.error);
+        enquirer.ask(questions)
+            .then(answers => {
+                let key = answers.API_Key;
+                let path = answers.path;
+                resolve({
+                    'key': key,
+                    'path': path
+                })
+            })
+            .catch(console.error);
+    })
 }
-setUp();
+
+async function main(canvas = require('canvas-api-wrapper')) {
+    let settings = await setUp();
+    console.log(settings);
+    canvas.apiToken = settings.key;
+}
+
+if (require.main === module) {
+    main()
+}
+
+module.exports = main;

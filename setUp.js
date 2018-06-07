@@ -33,6 +33,8 @@ async function main(canvas = require('canvas-api-wrapper')) {
     let settings = await setUp();
     console.log(settings);
     canvas.apiToken = settings.key;
+    return settings.path;
+
 }
 
 if (require.main === module) {

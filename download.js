@@ -28,18 +28,25 @@ function writeToHD(pages, path, course_ID = 0) {
             }
         }
         else {
-            fs.mkdir()
+            fs.mkdir(pages);
         }
     })
 }
 
 async function main() {
     let course_ID = await getCourseID();
-    console.log(course_ID);
+    // console.log(course_ID);
     let path = await setup(canvas);
-    writeToHD(course_ID)
-    let pages = await canvas.getCourse(course_ID).pages.get();
-    // writeToHD(pages, path);
+    // console.log(path);
+    console.log(`This file is ${__dirname}`);
+    console.log(process.cwd());
+    process.chdir('../../')
+    console.log(process.cwd());
+    // process.chdir(path);
+
+    // writeToHD(course_ID);
+    // let pages = await canvas.getCourse(course_ID).pages.get();
+    // // writeToHD(pages, path);
 }
 
 main();

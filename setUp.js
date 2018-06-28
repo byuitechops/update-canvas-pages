@@ -1,44 +1,69 @@
 const Enquirer = require('enquirer');
 const enquirer = new Enquirer();
 const fs = require('fs');
+const chalk = require('chalk');
 
 function setUp() {
     return new Promise((resolve, reject) => {
-        let questions = [{
+        // let questions = [{
+        //         name: 'API_Key',
+        //         type: 'input',
+        //         message: 'What is your API Key?',
+        //     },
+        //     {
+        //         name: 'path',
+        //         type: 'input',
+        //         message: 'Where will the course to be saved?',
+        //         default: '/documents/courses'
+        //     }
+        // ];
+
+        enquirer.question({
             name: 'API_Key',
             type: 'input',
             message: 'What is your API Key?',
-        },
-        {
+            when: () => process.env.CANVAS_API_TOKEN === undefined
+        });
+
+        enquirer.question({
             name: 'path',
             type: 'input',
             message: 'Where will the course to be saved?',
-            default: `/documents/courses`
-        }]
+            default: '/Documents/courses'
+        });
 
-        enquirer.ask(questions)
+        enquirer.ask()
             .then(answers => {
-                let key = answers.API_Key;
+                let key = process.env.CANVAS_API_TOKEN || answers.API_Key;
                 let path = answers.path;
                 resolve({
                     'key': key,
                     'path': path
-                })
+                });
             })
-            .catch(console.error);
+            .catch(reject);
     })
 }
 
-async function main(canvas = require('canvas-api-wrapper')) {
-    let settings = await setUp();
-    console.log(settings);
-    canvas.apiToken = settings.key;
-    return settings.path;
+function errorHandling(err) {
+    console.error(chalk.red(err));
+}
 
+async function main(canvas = require('canvas-api-wrapper')) {
+    try {
+        let settings = await setUp();
+        console.log(settings);
+        if (!process.env.CANVAS_API_TOKEN) {
+            canvas.apiToken = settings.key;
+        }
+        return settings.path;
+    } catch (err) {
+        errorHandling(err);
+    }
 }
 
 if (require.main === module) {
-    main()
+    main();
 }
 
 module.exports = main;

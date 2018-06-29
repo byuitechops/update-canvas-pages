@@ -1,6 +1,5 @@
 const Enquirer = require('enquirer');
 const enquirer = new Enquirer();
-const fs = require('fs');
 const chalk = require('chalk');
 
 function setUp() {
@@ -42,7 +41,7 @@ function setUp() {
                 });
             })
             .catch(reject);
-    })
+    });
 }
 
 function errorHandling(err) {
@@ -66,4 +65,7 @@ if (require.main === module) {
     main();
 }
 
-module.exports = main;
+module.exports = {
+    main,
+    errorHandling
+};

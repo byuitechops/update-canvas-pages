@@ -2,15 +2,16 @@ const Enquirer = require('enquirer');
 const enquirer = new Enquirer;
 const fs = require('fs');
 const canvas = require('canvas-api-wrapper');
-const setup = require('./setUp.js');
+const setup = require('./setUp.js').main;
 const chalk = require('chalk');
 const path = require('path');
+const handleErrors = require('./setup.js').errorHandling;
 
 // Use Enquirer to get the course ID from the user
 function getCourseID() {
     return new Promise((resolve, reject) => {
         enquirer.question('course_ID', 'ID of the course you want to download', {
-            default: 16956
+            default: 16896
         });
         enquirer.ask('course_ID')
             .then(answers => {
@@ -47,6 +48,7 @@ function createDirectory(pathName) {
 function verifyPath(dirPath) {
     let homeDir = require('os').homedir();
     let pathToDir = path.join(homeDir, dirPath);
+    console.log(pathToDir);
 
     /**
      * Checks if the directory exists.
@@ -68,7 +70,9 @@ function verifyPath(dirPath) {
         pathName = path.normalize(pathName).split(path.sep);
         pathName.forEach((sdir, index) => {
             var pathInQuestion = pathName.slice(0, index + 1).join(path.sep);
-            if (!isDir(pathInQuestion) && pathInQuestion) fs.mkdirSync(pathInQuestion);
+            if (!isDir(pathInQuestion) && pathInQuestion) {
+                fs.mkdirSync(pathInQuestion);
+            }
         });
     }
 
@@ -80,25 +84,36 @@ function writeFile(path, fileGuts) {
     try {
         fs.writeFileSync(path, fileGuts);
     } catch (err) {
-        errorHandling(err);
+        handleErrors(err);
     }
-    console.log(color(`${path} written`));
+    console.log(`${path} written`);
 }
+/**
+ * 
+ * @param {object} toBeWritten 
+ */
+function createFileName(name, number) {
+    return `${name.replace(/\s/g, '_')}_${number}`;
 }
 
 async function main() {
     let dirPath = await setup(canvas);
     let course_ID = await getCourseID();
     let course = await canvas.getCourse(course_ID).get();
-    let pages = await course.pages.getComplete();
-    let fullPath = verifyPath(dirPath);
-    let html = pages.map(page => {
-        return page.getHtml();
-    });
+    let courseName = createFileName(course.course_code, course.id);
+    console.log(path.join(dirPath, courseName));
+    // let pages = await course.pages.getComplete();
+    let fullPath = verifyPath(path.join(dirPath, courseName));
+    // console.log(pages[0].title.replace(/\s/g, ''));
+    // let html = pages.map(page => {
+    //     let fileName = createFileName(page.title, page.page_id);
+    //     console.log(page);
+    //     return page.getHtml();
+    // });
 
-    writeFile(course);
-    writeFile(pages);
-    console.log(html);
+    // writeFile(course);
+    // writeFile(pages);
+    // console.log(html);
 }
 
 main();

@@ -7,15 +7,18 @@ const Enquirer = require('enquirer'),
     path = require('path'),
     handleErrors = require('./setup.js').errorHandling;
 
-async function getCourseToUpload() {
 
-    function sliceName(names) {
-        return names.map(name => {
-            return name.substr(0, name.lastIndexOf('-'));
-        });
-    }
+function sliceName(names) {
+    return names.map(name => {
+        return name.substr(0, name.lastIndexOf('-'));
+    });
+}
 
-    // let courseLocation;
+async function getCourseToUpload(homeDir) {
+    let courseLocation,
+        readable,
+        courses;
+
     enquirer.question({
         name: 'courseLocation',
         type: 'input',
@@ -23,21 +26,20 @@ async function getCourseToUpload() {
         default: '/Documents/courses'
     });
 
-    let courseLocation;
     await enquirer.prompt('courseLocation')
         .then(answer => {
-            let homeDir = require('os').homedir();
             courseLocation = path.join(homeDir, answer.courseLocation);
         });
 
-    let courses = sliceName(fs.readdirSync(courseLocation));
+    readable = fs.readdirSync(courseLocation);
+    courses = sliceName(fs.readdirSync(courseLocation));
 
-    enquirer.register('radio', require('prompt-radio'));
+    enquirer.register('checkbox', require('prompt-checkbox'));
     enquirer.question({
         name: 'course',
-        type: 'radio',
+        type: 'checkbox',
         message: 'What course do you want to update?',
-        choices: courses
+        choices: sliceName(fs.readdirSync(courseLocation))
     });
 
     let pages;
@@ -48,26 +50,22 @@ async function getCourseToUpload() {
         choices: pages
     });
 
-    await enquirer.prompt('course')
-        .then(answer => {
-            console.log(answer);
-            pages = fs.readdirSync(answer.course);
-        });
-
-    console.log(pages);
-
-
-
-
-
+    let courseContent = await enquirer.prompt('course');
+    return courseContent;
 
 }
 
+async function getPagesToUpdate(courses) {
 
-function main() {
-    getCourseToUpload();
-    // getPagesToUpdate();
+    return;
+}
 
+async function main() {
+    let home = require('os').homedir();
+    let courses = await getCourseToUpload(home);
+    let location = path.join(home, courses.courseLocation);
+    console.log(location);
+    let pages = await getPagesToUpdate(courses.courseContent, location);
 }
 
 main();

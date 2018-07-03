@@ -7,7 +7,9 @@
     "canvas-api-wrapper": "^3.2.1",
     "chalk": "^2.4.1",
     "enquirer": "^1.0.3",
-    "fs": "^0.0.1-security"
+    "fs": "^0.0.1-security",
+    "prompt-checkbox": "^2.2.0",
+    "prompt-radio": "^1.2.1"
   },
   "devDependencies": {},
   "scripts": {

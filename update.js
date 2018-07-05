@@ -7,17 +7,24 @@ const Enquirer = require('enquirer'),
     path = require('path'),
     handleErrors = require('./setup.js').errorHandling;
 
+enquirer.register('checkbox', require('prompt-checkbox'));
 
-function sliceName(names) {
-    return names.map(name => {
-        return name.substr(0, name.lastIndexOf('-'));
-    });
+
+function buildCourseObjects(names) {
+    return names.reduce((acc, name, index) => {
+        return acc.concat({
+            name,
+            choice: `(${index + 1}) ${name.substr(0, name.lastIndexOf('-'))}`,
+            number: name.slice(name.lastIndexOf('-') + 1)
+        });
+    }, []);
 }
 
 async function getCourseToUpload(homeDir) {
     let courseLocation,
-        readable,
-        courses;
+        readableDirContent,
+        courseObjects,
+        choices;
 
     enquirer.question({
         name: 'courseLocation',
@@ -26,46 +33,51 @@ async function getCourseToUpload(homeDir) {
         default: '/Documents/courses'
     });
 
-    await enquirer.prompt('courseLocation')
-        .then(answer => {
-            courseLocation = path.join(homeDir, answer.courseLocation);
-        });
+    await enquirer.prompt('courseLocation');
+    courseLocation = path.join(homeDir, enquirer.answers.courseLocation);
 
-    readable = fs.readdirSync(courseLocation);
-    courses = sliceName(fs.readdirSync(courseLocation));
+    readableDirContent = fs.readdirSync(courseLocation);
+    courseObjects = buildCourseObjects(readableDirContent);
+    choices = courseObjects.map(courseObject => courseObject.choice);
 
-    enquirer.register('checkbox', require('prompt-checkbox'));
     enquirer.question({
-        name: 'course',
+        name: 'coursesToUpdate',
         type: 'checkbox',
         message: 'What course do you want to update?',
-        choices: sliceName(fs.readdirSync(courseLocation))
+        choices
     });
 
-    let pages;
-    enquirer.question({
-        name: 'pages',
-        type: 'radio',
-        message: 'What pages do you want to update?',
-        choices: pages
-    });
+    await enquirer.prompt('coursesToUpdate');
 
-    let courseContent = await enquirer.prompt('course');
-    return courseContent;
+    let coursesToUpdate = courseObjects.filter(courseObject => enquirer.answers.coursesToUpdate.includes(courseObject.choice));
 
+    return coursesToUpdate.map(courseToUpdate => courseToUpdate.name);
 }
 
-async function getPagesToUpdate(courses) {
 
+async function getPagesToUpdate(courses, location) {
+    let pages,
+        courseLocation;
+    // console.log(courses);
+
+    courses.courseToUpdate.course.forEach((course => {
+        courseLocation = path.join(location, course);
+        pages = fs.readdirSync(courseLocation);
+        enquirer.question({
+            name: 'pages',
+            type: 'radio',
+            message: `What pages do you want to update from ${course}?`,
+            choices: pages
+        });
+    }));
     return;
 }
 
 async function main() {
     let home = require('os').homedir();
     let courses = await getCourseToUpload(home);
-    let location = path.join(home, courses.courseLocation);
-    console.log(location);
-    let pages = await getPagesToUpdate(courses.courseContent, location);
+    // let location = path.join(home, courses.courseToUpdate.courseLocation);
+    // let pages = await getPagesToUpdate(courses, location);
 }
 
 main();

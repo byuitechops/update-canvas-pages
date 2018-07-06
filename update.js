@@ -7,7 +7,19 @@ const Enquirer = require('enquirer'),
     path = require('path'),
     handleErrors = require('./setup.js').errorHandling;
 
+function getSettings() {
+    let settingsFile;
+    try {
+        fs.accessSync('./settings.json', fs.constants.F_OK);
+        settingsFile = fs.readFileSync('./settings.json');
+    } catch (err) {
+        settingsFile = '';
+    }
+    return settingsFile.length > 0 ? JSON.parse(settingsFile) : {};
+}
+
 enquirer.register('checkbox', require('prompt-checkbox'));
+
 
 
 function buildCourseObjects(names) {
@@ -20,7 +32,7 @@ function buildCourseObjects(names) {
     }, []);
 }
 
-async function getCourseToUpload(homeDir) {
+async function getCourseToUpload(homeDir, settings) {
     let courseLocation,
         readableDirContent,
         courseObjects,
@@ -30,13 +42,27 @@ async function getCourseToUpload(homeDir) {
         name: 'courseLocation',
         type: 'input',
         message: 'Where are your courses saved?',
-        default: '/Documents/courses'
+        default: settings.courseLocation ? settings.courseLocation : ''
     });
 
-    await enquirer.prompt('courseLocation');
-    courseLocation = path.join(homeDir, enquirer.answers.courseLocation);
+    try {
+        await enquirer.prompt('courseLocation')
+            .then(answer => {
+                if (answer.courseLocation !== settings.courseLocation) {
+                    settings.courseLocation = answer.courseLocation;
+                    try {
+                        fs.writeFileSync('./settings.json', JSON.stringify(settings || '{}', null, 4));
+                    } catch (err) {
+                        handleErrors(err);
+                    }
+                }
+            });
+        courseLocation = path.join(homeDir, enquirer.answers.courseLocation);
+        readableDirContent = fs.readdirSync(courseLocation);
+    } catch (err) {
+        handleErrors(err);
+    }
 
-    readableDirContent = fs.readdirSync(courseLocation);
     courseObjects = buildCourseObjects(readableDirContent);
     choices = courseObjects.map(courseObject => courseObject.choice);
 
@@ -50,6 +76,7 @@ async function getCourseToUpload(homeDir) {
     await enquirer.prompt('coursesToUpdate');
 
     let coursesToUpdate = courseObjects.filter(courseObject => enquirer.answers.coursesToUpdate.includes(courseObject.choice));
+    console.log(coursesToUpdate);
 
     return coursesToUpdate.map(courseToUpdate => courseToUpdate.name);
 }
@@ -62,6 +89,7 @@ async function getPagesToUpdate(courses, location) {
 
     courses.courseToUpdate.course.forEach((course => {
         courseLocation = path.join(location, course);
+
         pages = fs.readdirSync(courseLocation);
         enquirer.question({
             name: 'pages',
@@ -74,10 +102,17 @@ async function getPagesToUpdate(courses, location) {
 }
 
 async function main() {
-    let home = require('os').homedir();
-    let courses = await getCourseToUpload(home);
-    // let location = path.join(home, courses.courseToUpdate.courseLocation);
-    // let pages = await getPagesToUpdate(courses, location);
+    try {
+        let settings = getSettings();
+        console.log(settings);
+        let home = require('os').homedir();
+        let courses = await getCourseToUpload(home, settings);
+        // let location = path.join(home, courses);
+        // let pages = await getPagesToUpdate(courses, courseLocation);
+    } catch (err) {
+        handleErrors(err);
+    }
 }
+
 
 main();

@@ -1,6 +1,16 @@
 const Enquirer = require('enquirer');
 const enquirer = new Enquirer();
 const chalk = require('chalk');
+const fs = require('fs');
+let settingsFile;
+
+try {
+    fs.accessSync('./settings.json', fs.constants.F_OK);
+    settingsFile = fs.readFileSync('./settings.json');
+} catch (err) {
+    settingsFile = '';
+}
+let settings = settingsFile.length > 0 ? JSON.parse(settingsFile) : {};
 
 function setUp() {
     return new Promise((resolve, reject) => {
@@ -28,7 +38,7 @@ function setUp() {
             name: 'path',
             type: 'input',
             message: 'Where will the course to be saved?',
-            default: '/Documents/courses'
+            default: settings.courseLocation ? settings.courseLocation : '/Documents/courses'
         });
 
         enquirer.ask()

@@ -6,6 +6,7 @@ const Enquirer = require('enquirer'),
     chalk = require('chalk'),
     path = require('path'),
     handleErrors = require('./setup.js').errorHandling;
+enquirer.register('checkbox', require('prompt-checkbox'));
 
 function getSettings() {
     let settingsFile;
@@ -16,22 +17,32 @@ function getSettings() {
         settingsFile = '';
     }
     return settingsFile.length > 0 ? JSON.parse(settingsFile) : {};
-}
-
-enquirer.register('checkbox', require('prompt-checkbox'));
+} // end function
 
 
-
-function buildCourseObjects(names) {
+function buildInfoObj(names, location) {
     return names.reduce((acc, name, index) => {
         return acc.concat({
-            name,
+            name: name.indexOf('.') !== -1 ? name.substr(0, name.lastIndexOf('.')) : name,
             choice: `(${index + 1}) ${name.substr(0, name.lastIndexOf('-'))}`,
-            number: name.slice(name.lastIndexOf('-') + 1)
+            number: name.slice(name.lastIndexOf('-') + 1, name.lastIndexOf('.')),
+            location: path.join(location, name)
         });
     }, []);
-}
+} // end function
 
+function choiceQuestion(name, courses, pages) {
+    let manipulatedThing = pages ? pages : courses;
+    let choices = manipulatedThing.map(manipulatedThing => manipulatedThing.choice);
+
+    return enquirer.question({
+        name,
+        type: 'checkbox',
+        message: name === 'courses' ? 'What courses would you like to update?' : `What pages to update from ${courses.choice}?`,
+        choices
+    });
+
+}
 async function getCourseToUpload(homeDir, settings) {
     let courseLocation,
         readableDirContent,
@@ -63,56 +74,56 @@ async function getCourseToUpload(homeDir, settings) {
         handleErrors(err);
     }
 
-    courseObjects = buildCourseObjects(readableDirContent);
-    choices = courseObjects.map(courseObject => courseObject.choice);
+    courseObjects = buildInfoObj(readableDirContent, courseLocation);
 
-    enquirer.question({
-        name: 'coursesToUpdate',
-        type: 'checkbox',
-        message: 'What course do you want to update?',
-        choices
+    // Create question to choose course to update
+    choiceQuestion('courses', courseObjects);
+    await enquirer.prompt('courses');
+
+    let coursesToUpdate = courseObjects.filter(courseObject => enquirer.answers.courses.includes(courseObject.choice));
+
+    return coursesToUpdate;
+} // end function
+
+async function getPagesToUpdate(courses) {
+    let pages,
+        pagesToUpdate;
+
+    courses.forEach(course => {
+        pages = fs.readdirSync(course.location);
+        pages = buildInfoObj(pages, course.location);
+
+        choiceQuestion('pages', course, pages);
+        enquirer.prompt('pages')
+            .then(answer => {
+                console.log(answer);
+            });
+
     });
 
-    await enquirer.prompt('coursesToUpdate');
+    pagesToUpdate = pages.filter(page => enquirer.answers.pages.includes(page.choice));
 
-    let coursesToUpdate = courseObjects.filter(courseObject => enquirer.answers.coursesToUpdate.includes(courseObject.choice));
-    console.log(coursesToUpdate);
+    return pagesToUpdate;
 
-    return coursesToUpdate.map(courseToUpdate => courseToUpdate.name);
-}
+} // end function
 
-
-async function getPagesToUpdate(courses, location) {
-    let pages,
-        courseLocation;
-    // console.log(courses);
-
-    courses.courseToUpdate.course.forEach((course => {
-        courseLocation = path.join(location, course);
-
-        pages = fs.readdirSync(courseLocation);
-        enquirer.question({
-            name: 'pages',
-            type: 'radio',
-            message: `What pages do you want to update from ${course}?`,
-            choices: pages
-        });
-    }));
+async function updatePages(pages) {
     return;
-}
+} // end function
 
 async function main() {
     try {
         let settings = getSettings();
-        console.log(settings);
         let home = require('os').homedir();
         let courses = await getCourseToUpload(home, settings);
-        // let location = path.join(home, courses);
-        // let pages = await getPagesToUpdate(courses, courseLocation);
+        let pagesToUpdate = await getPagesToUpdate(courses);
+        console.log(pagesToUpdate);
+
+        updatePages(pagesToUpdate);
+
     } catch (err) {
         handleErrors(err);
     }
-}
-
+} // end function
 
 main();

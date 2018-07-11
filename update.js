@@ -38,6 +38,7 @@ function choiceQuestion(name, courses, pages) {
     return enquirer.question({
         name,
         type: 'checkbox',
+        radio: pages ? true : false,
         message: name === 'courses' ? 'What courses would you like to update?' : `What pages to update from ${courses.choice}?`,
         choices
     });
@@ -96,9 +97,10 @@ async function getPagesToUpdate(courses) {
         choiceQuestion('pages', course, pages);
         enquirer.prompt('pages')
             .then(answer => {
-                console.log(answer);
+                // console.log(answer);
             });
 
+        console.log(enquirer.answers.pages);
     });
 
     pagesToUpdate = pages.filter(page => enquirer.answers.pages.includes(page.choice));

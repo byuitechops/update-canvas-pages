@@ -7,6 +7,7 @@ const Enquirer = require('enquirer'),
     path = require('path'),
     handleErrors = require('./setup.js').errorHandling;
 enquirer.register('checkbox', require('prompt-checkbox'));
+enquirer.register('radio', require('prompt-radio'));
 
 function getSettings() {
     let settingsFile;
@@ -31,15 +32,17 @@ function buildInfoObj(names, location) {
     }, []);
 } // end function
 
-function choiceQuestion(name, courses, pages) {
-    let manipulatedThing = pages ? pages : courses;
+function choiceQuestion(name, course, pages) {
+    let manipulatedThing = pages ? pages : course;
     let choices = manipulatedThing.map(manipulatedThing => manipulatedThing.choice);
+    console.log('PAGES COURSE: ', course[0].choice);
 
     return enquirer.question({
         name,
-        type: 'checkbox',
+        type: pages ? 'checkbox' : 'radio',
+        errorMessage: pages ? '' : 'If you want more than one course, run the tool multiple times.',
         radio: pages ? true : false,
-        message: name === 'courses' ? 'What courses would you like to update?' : `What pages to update from ${courses.choice}?`,
+        message: name === 'courses' ? 'What course would you like to update?' : `What pages to update from ${course[0].choice}?`,
         choices
     });
 
@@ -47,8 +50,7 @@ function choiceQuestion(name, courses, pages) {
 async function getCourseToUpload(homeDir, settings) {
     let courseLocation,
         readableDirContent,
-        courseObjects,
-        choices;
+        courseObjects;
 
     enquirer.question({
         name: 'courseLocation',
@@ -82,29 +84,25 @@ async function getCourseToUpload(homeDir, settings) {
     await enquirer.prompt('courses');
 
     let coursesToUpdate = courseObjects.filter(courseObject => enquirer.answers.courses.includes(courseObject.choice));
+    console.log('COURSES TO UPDATE ', coursesToUpdate);
 
     return coursesToUpdate;
 } // end function
 
-async function getPagesToUpdate(courses) {
+async function getPagesToUpdate(course) {
     let pages,
         pagesToUpdate;
 
-    courses.forEach(course => {
+    course.map((course) => {
         pages = fs.readdirSync(course.location);
         pages = buildInfoObj(pages, course.location);
-
-        choiceQuestion('pages', course, pages);
-        enquirer.prompt('pages')
-            .then(answer => {
-                // console.log(answer);
-            });
-
-        console.log(enquirer.answers.pages);
     });
+    choiceQuestion('pages', course, pages);
+    enquirer.prompt('pages')
+        .then(answer => {});
 
     pagesToUpdate = pages.filter(page => enquirer.answers.pages.includes(page.choice));
-
+    console.log('PAGES TO UPDATE: ', pagesToUpdate);
     return pagesToUpdate;
 
 } // end function
@@ -113,13 +111,12 @@ async function updatePages(pages) {
     return;
 } // end function
 
-async function main() {
+async function update() {
     try {
         let settings = getSettings();
         let home = require('os').homedir();
-        let courses = await getCourseToUpload(home, settings);
-        let pagesToUpdate = await getPagesToUpdate(courses);
-        console.log(pagesToUpdate);
+        let course = await getCourseToUpload(home, settings);
+        let pagesToUpdate = await getPagesToUpdate(course);
 
         updatePages(pagesToUpdate);
 
@@ -128,4 +125,4 @@ async function main() {
     }
 } // end function
 
-main();
+update();

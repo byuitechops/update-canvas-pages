@@ -5,6 +5,7 @@ const Enquirer = require('enquirer'),
     setup = require('./setUp.js').main,
     chalk = require('chalk'),
     path = require('path'),
+    he = require('he'),
     handleErrors = require('./setup.js').errorHandling;
 enquirer.register('checkbox', require('prompt-checkbox'));
 enquirer.register('radio', require('prompt-radio'));
@@ -18,35 +19,36 @@ function getSettings() {
         settingsFile = '';
     }
     return settingsFile.length > 0 ? JSON.parse(settingsFile) : {};
-} // end function
+} // end function getSettings
 
 
 function buildInfoObj(names, location) {
     return names.reduce((acc, name, index) => {
+        let isFile = name.indexOf('.') !== -1 ? true : false;
         return acc.concat({
-            name: name.indexOf('.') !== -1 ? name.substr(0, name.lastIndexOf('.')) : name,
+            name: isFile ? name.substr(0, name.lastIndexOf('.')) : name,
             choice: `(${index + 1}) ${name.substr(0, name.lastIndexOf('-'))}`,
-            number: name.slice(name.lastIndexOf('-') + 1, name.lastIndexOf('.')),
+            number: isFile ? name.slice(name.lastIndexOf('-') + 1, name.lastIndexOf('.')) : name.slice(name.lastIndexOf('-') + 1),
             location: path.join(location, name)
         });
     }, []);
-} // end function
+} // end function buildInfoObj
 
 function choiceQuestion(name, course, pages) {
     let manipulatedThing = pages ? pages : course;
     let choices = manipulatedThing.map(manipulatedThing => manipulatedThing.choice);
-    console.log('PAGES COURSE: ', course[0].choice);
 
     return enquirer.question({
         name,
-        type: pages ? 'checkbox' : 'radio',
+        type: 'checkbox', //pages ? 'checkbox' : 'radio',
         errorMessage: pages ? '' : 'If you want more than one course, run the tool multiple times.',
         radio: pages ? true : false,
-        message: name === 'courses' ? 'What course would you like to update?' : `What pages to update from ${course[0].choice}?`,
+        message: name === 'courses' ? 'What course would you like to update?' : `What pages to update from ${course.choice}?`,
         choices
     });
 
-}
+} // end function choiceQuestion
+
 async function getCourseToUpload(homeDir, settings) {
     let courseLocation,
         readableDirContent,
@@ -83,46 +85,92 @@ async function getCourseToUpload(homeDir, settings) {
     choiceQuestion('courses', courseObjects);
     await enquirer.prompt('courses');
 
-    let coursesToUpdate = courseObjects.filter(courseObject => enquirer.answers.courses.includes(courseObject.choice));
-    console.log('COURSES TO UPDATE ', coursesToUpdate);
+    let courseToUpdate = courseObjects.filter(courseObject => enquirer.answers.courses.includes(courseObject.choice));
 
-    return coursesToUpdate;
-} // end function
+    return courseToUpdate;
+} // end function getCourseToUpload
 
-async function getPagesToUpdate(course) {
+async function getPagesToUpdate(courses) {
     let pages,
         pagesToUpdate;
+    if (Array.isArray(courses)) {
+        courses.map((course) => {
+            pages = fs.readdirSync(course.location);
+            pages = buildInfoObj(pages, course.location);
+        });
+    } else {
+        pages = fs.readdirSync(courses.location);
+        pages = buildInfoObj(pages, courses.location);
+    }
+    choiceQuestion('pages' + courses.number, courses, pages);
+    // await enquirer.prompt('pages' + courses.number);
 
-    course.map((course) => {
-        pages = fs.readdirSync(course.location);
-        pages = buildInfoObj(pages, course.location);
-    });
-    choiceQuestion('pages', course, pages);
-    enquirer.prompt('pages')
-        .then(answer => {});
 
-    pagesToUpdate = pages.filter(page => enquirer.answers.pages.includes(page.choice));
-    console.log('PAGES TO UPDATE: ', pagesToUpdate);
+    // pagesToUpdate = pages.filter(page => enquirer.answers['pages' + courses.number].includes(page.choice));
+    // console.log(pagesToUpdate);
     return pagesToUpdate;
 
-} // end function
+} // end function getPagesToUpdate
 
-async function updatePages(pages) {
+async function updatePages(courses) {
+    for (let i = 0; i < courses.length; i++) {
+        let pages = fs.readdirSync(courses[i].location);
+        pages = buildInfoObj(pages, courses[i].location);
+        getPagesToUpdate(courses[i]);
+        let pagesToUpdate = await enquirer.ask('pages' + courses[i].number);
+        pagesToUpdate = pages.filter(page => pagesToUpdate['pages' + courses[i].number].includes(page.choice));
+
+        let course = canvas.getCourse(courses[i].number);
+
+        for (let j = 0; j < pagesToUpdate.length; j++) {
+            let newHtml = fs.readFileSync(pagesToUpdate[j].location, 'utf8');
+
+            // let encoded = he.encode(newHtml);
+            let cleaned = newHtml.replace('\u00A0', 'POTATO');
+
+
+
+            console.log(cleaned);
+            let page = await course.pages.getOne(pagesToUpdate[j].number);
+
+            try {
+                page.setHtml(newHtml);
+                console.log(page.getHtml());
+                await page.update();
+            } catch (e) {
+                console.log(e);
+            }
+
+        }
+
+    }
+
     return;
-} // end function
+} // end function updatePages
 
-async function update() {
+async function main() {
     try {
         let settings = getSettings();
         let home = require('os').homedir();
-        let course = await getCourseToUpload(home, settings);
-        let pagesToUpdate = await getPagesToUpdate(course);
+        let courses = await getCourseToUpload(home, settings);
+        console.log(courses);
+        // let pagesToUpdate = await getPagesToUpdate(courses);
 
-        updatePages(pagesToUpdate);
+        updatePages(courses);
 
     } catch (err) {
         handleErrors(err);
     }
-} // end function
+} // end function main
 
-update();
+main();
+
+// Once you know what pages to update
+// For each one...
+// get the course ID
+// get the page ID for the page to update
+// let course = canvas.getCourse(course_ID)
+// let page = await course.pages.getOne(page_ID);
+// page.setHtml(updatedHtml);
+// END LOOP
+// await course.pages.update();

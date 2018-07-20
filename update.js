@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const Enquirer = require('enquirer'),
     enquirer = new Enquirer,
     fs = require('fs'),
@@ -125,17 +127,15 @@ async function updatePages(courses) {
         for (let j = 0; j < pagesToUpdate.length; j++) {
             let newHtml = fs.readFileSync(pagesToUpdate[j].location, 'utf8');
 
-            // let encoded = he.encode(newHtml);
-            let cleaned = newHtml.replace('\u00A0', 'POTATO');
-
-
+            let encoded = he.encode(newHtml);
+            let cleaned = newHtml.replace(/&#160;/g, 'POTATO').replace(/\s/g, '');
 
             console.log(cleaned);
             let page = await course.pages.getOne(pagesToUpdate[j].number);
 
             try {
                 page.setHtml(newHtml);
-                console.log(page.getHtml());
+                // console.log(page.getHtml());
                 await page.update();
             } catch (e) {
                 console.log(e);
@@ -164,13 +164,3 @@ async function main() {
 } // end function main
 
 main();
-
-// Once you know what pages to update
-// For each one...
-// get the course ID
-// get the page ID for the page to update
-// let course = canvas.getCourse(course_ID)
-// let page = await course.pages.getOne(page_ID);
-// page.setHtml(updatedHtml);
-// END LOOP
-// await course.pages.update();

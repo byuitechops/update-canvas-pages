@@ -2,9 +2,12 @@
   "name": "update-canvas-pages",
   "version": "1.0.0",
   "description": "",
-  "main": "setUp.js",
+  "main": "download.js",
+  "bin": {
+    "downloadCanvasPages": "download.js"
+  },
   "dependencies": {
-    "canvas-api-wrapper": "^3.2.1",
+    "canvas-api-wrapper": "^3.2.5",
     "chalk": "^2.4.1",
     "enquirer": "^1.0.3",
     "fs": "^0.0.1-security",

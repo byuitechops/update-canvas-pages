@@ -12,8 +12,10 @@ const Enquirer = require('enquirer'),
 enquirer.register('checkbox', require('prompt-checkbox'));
 enquirer.register('radio', require('prompt-radio'));
 
-function getSettings() {
+function getSettings(homedir) {
     let settingsFile;
+    let filePath = path.resolve(homedir, 'update-canvas-pages/settings.json');
+    console.log(filePath);
     try {
         fs.accessSync('./settings.json', fs.constants.F_OK);
         settingsFile = fs.readFileSync('./settings.json');
@@ -51,6 +53,11 @@ function choiceQuestion(name, course, pages) {
 
 } // end function choiceQuestion
 
+function verifyPath(dirPath) {
+    let homeDir = require('os').homedir();
+    let pathToDir = path.join(homeDir, dirPath);
+}
+
 async function getCourseToUpload(homeDir, settings) {
     let courseLocation,
         readableDirContent,
@@ -76,6 +83,7 @@ async function getCourseToUpload(homeDir, settings) {
                 }
             });
         courseLocation = path.join(homeDir, enquirer.answers.courseLocation);
+        console.log(courseLocation);
         readableDirContent = fs.readdirSync(courseLocation);
     } catch (err) {
         handleErrors(err);
@@ -150,8 +158,8 @@ async function updatePages(courses) {
 
 async function main() {
     try {
-        let settings = getSettings();
         let home = require('os').homedir();
+        let settings = getSettings(home);
         let courses = await getCourseToUpload(home, settings);
         console.log(courses);
         // let pagesToUpdate = await getPagesToUpdate(courses);

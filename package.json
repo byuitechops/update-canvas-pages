@@ -4,7 +4,8 @@
   "description": "",
   "main": "download.js",
   "bin": {
-    "downloadCanvasPages": "download.js"
+    "downloadCanvasPages": "download.js",
+    "updateCanvasPages": "update.js"
   },
   "dependencies": {
     "canvas-api-wrapper": "^3.2.5",

@@ -7,7 +7,8 @@ const Enquirer = require('enquirer'),
     setup = require('./setUp.js').main,
     path = require('path'),
     handleErrors = require('./setup.js').errorHandling,
-    npmWriteFile = require('write');
+    npmWriteFile = require('write'),
+    camelCase = require('camelcase');
 enquirer.register('radio', require('prompt-radio'));
 
 function getCourseID() {
@@ -67,9 +68,7 @@ function verifyPath(coursePath) {
  */
 function createFileName(name, number, fullCourse) {
     // This needs to be run every time
-    name = `${name
-        .trim()
-        .replace(/-|\s/g, '_')
+    name = `${camelCase(name)
         .replace(/\W/g, '')}`;
     // This needs to be run if the 'fullcourse' option is selected false
     if (!fullCourse) name = `${name}-${number}`;

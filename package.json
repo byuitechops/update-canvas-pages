@@ -8,6 +8,7 @@
     "updateCanvasPages": "update.js"
   },
   "dependencies": {
+    "camelcase": "^5.0.0",
     "canvas-api-wrapper": "^3.2.5",
     "chalk": "^2.4.1",
     "cheerio": "^1.0.0-rc.2",

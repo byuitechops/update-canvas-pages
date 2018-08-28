@@ -1,30 +1,34 @@
 #!/usr/bin/env node
+const cheerio = require('cheerio');
 const Enquirer = require('enquirer'),
     enquirer = new Enquirer,
     fs = require('fs'),
     canvas = require('canvas-api-wrapper'),
     setup = require('./setUp.js').main,
-    chalk = require('chalk'),
     path = require('path'),
-    handleErrors = require('./setup.js').errorHandling;
+    handleErrors = require('./setup.js').errorHandling,
+    npmWriteFile = require('write');
+enquirer.register('radio', require('prompt-radio'));
 
 function getCourseID() {
     return new Promise((resolve, reject) => {
-        enquirer.question('course_ID', 'ID of the course you want to download', {
-            default: 16786
+        enquirer.question('course_ID', 'ID of the course you want to download?', {
         });
-        enquirer.ask('course_ID')
+        enquirer.question('fullHtml', 'Do you want the full HTML of the page?', {
+            default: 'no',
+            type: 'radio',
+            choices: ['Yes', 'No']
+        });
+        enquirer.ask()
             .then(answers => {
-                resolve(answers.course_ID);
+                resolve(answers);
             })
             .catch(reject);
     });
 }
 
 
-function verifyPath(dirPath) {
-    let homeDir = require('os').homedir();
-    let pathToDir = path.join(homeDir, dirPath);
+function verifyPath(coursePath) {
 
     /**
      * Checks if the directory exists.
@@ -52,48 +56,48 @@ function verifyPath(dirPath) {
         });
     }
 
-    createDirectory(pathToDir);
-    return pathToDir;
+    createDirectory(coursePath);
+    return coursePath;
 }
 
-function writeFile(path, fileGuts) {
-    try {
-        fs.writeFileSync(path, fileGuts);
-    } catch (err) {
-        handleErrors(err);
-    }
-    console.log(`${path} written`);
-}
 
 /**
  * 
  * @param {object} toBeWritten 
  */
-function createFileName(name, number) {
-    console.log(chalk.blue(name));
-    return `${name
+function createFileName(name, number, fullCourse) {
+    // This needs to be run every time
+    name = `${name
         .trim()
         .replace(/-|\s/g, '_')
-        .replace(/\W/g, '')}-${number}`;
+        .replace(/\W/g, '')}`;
+    // This needs to be run if the 'fullcourse' option is selected false
+    if (!fullCourse) name = `${name}-${number}`;
+    return name;
 }
 
 async function main() {
     let dirPath = await setup(canvas);
-    let course_ID = await getCourseID();
+    let answers = await getCourseID();
+    let course_ID = answers.course_ID;
+    let fullCourse = answers.fullHtml === 'Yes' ? true : false;
     let course = await canvas.getCourse(course_ID).get();
-    let courseName = createFileName(course.course_code, course.id);
-    console.log(path.join(dirPath, courseName));
+    let courseName = createFileName(course.course_code, course.id, fullCourse);
     let pages = await course.pages.getComplete();
-    // let fullPath = verifyPath(path.join(dirPath, courseName));
-    // console.log(chalk.blue(pages[0].title));
-    // console.log(chalk.red(pages[0].title.replace(/-/g, '_').replace(/\W/g, '')));
+    let fullPath = verifyPath(path.join(dirPath, courseName));
 
     pages.map(page => {
-        let htmlString = page.getHTML();
-        let fileName = createFileName(page.title, page.page_id);
-        let filePath = path.join(dirPath, fileName);
-        writeFile(`${filePath}.html`, htmlString);
-        //     return page.getHtml();
+        let htmlString = page.getHtml();
+        if (fullCourse) {
+            var $ = cheerio.load(htmlString);
+            // Potential if(want the things removed) {run code below};
+            htmlString = $('link, script').remove();
+            htmlString = $.html();
+        }
+        let fileName = createFileName(page.title, page.page_id, fullCourse);
+        let filePath = path.join(fullPath, fileName);
+        console.log(filePath);
+        npmWriteFile(`${filePath}.html`, htmlString);
     });
 }
 

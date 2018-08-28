@@ -6,7 +6,7 @@ const fs = require('fs');
 let settingsFile;
 
 try {
-    let settingsFilePath = path.join(__dirname, './settings.json');
+    let settingsFilePath = path.join(__dirname, 'settings.json');
     fs.accessSync(settingsFilePath, fs.constants.F_OK);
     settingsFile = fs.readFileSync(settingsFilePath);
 } catch (err) {
@@ -16,6 +16,8 @@ let settings = settingsFile.length > 0 ? JSON.parse(settingsFile) : {};
 
 function setUp() {
     return new Promise((resolve, reject) => {
+        let defaultDir = path.join(require('os').homedir(), 'Documents', 'courses');
+        console.log(defaultDir);
 
         enquirer.question({
             name: 'API_Key',
@@ -28,7 +30,7 @@ function setUp() {
             name: 'path',
             type: 'input',
             message: 'Where will the course to be saved?',
-            default: settings.courseLocation ? settings.courseLocation : '/Documents/courses'
+            default: settings.courseLocation ? settings.courseLocation : defaultDir
         });
 
         enquirer.ask()
@@ -44,14 +46,6 @@ function setUp() {
     });
 }
 
-function writeBatchFiles(settings) {
-    let API_Key = `SET CANVAS_API_TOKEN=${settings.key}`;
-
-    console.log(API_Key);
-    fs.writeFileSync(`${require('os').homedir}/Desktop/download_pages.bat`, `${API_Key}\ncls\ndownloadCanvasPages`);
-    fs.writeFileSync(`${require('os').homedir}/Desktop/update_pages.bat`, `${API_Key}\ncls\nupdateCanvasPages`);
-}
-
 function errorHandling(err) {
     console.error(chalk.red(err));
 }
@@ -63,7 +57,6 @@ async function main(canvas = require('canvas-api-wrapper')) {
         if (!process.env.CANVAS_API_TOKEN) {
             canvas.apiToken = settings.key;
         }
-        writeBatchFiles(settings);
         return settings.path;
     } catch (err) {
         errorHandling(err);

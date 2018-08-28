@@ -84,14 +84,15 @@ async function main() {
     let courseName = createFileName(course.course_code, course.id);
     console.log(path.join(dirPath, courseName));
     let pages = await course.pages.getComplete();
-    let fullPath = verifyPath(path.join(dirPath, courseName));
+    // let fullPath = verifyPath(path.join(dirPath, courseName));
     // console.log(chalk.blue(pages[0].title));
     // console.log(chalk.red(pages[0].title.replace(/-/g, '_').replace(/\W/g, '')));
 
     pages.map(page => {
+        let htmlString = page.getHTML();
         let fileName = createFileName(page.title, page.page_id);
-        let filePath = path.join(fullPath, fileName);
-        writeFile(`${filePath}.html`, page.getHtml());
+        let filePath = path.join(dirPath, fileName);
+        writeFile(`${filePath}.html`, htmlString);
         //     return page.getHtml();
     });
 }

@@ -10,11 +10,13 @@
   "dependencies": {
     "canvas-api-wrapper": "^3.2.5",
     "chalk": "^2.4.1",
+    "cheerio": "^1.0.0-rc.2",
     "enquirer": "^1.0.3",
     "fs": "^0.0.1-security",
     "he": "^1.1.1",
     "prompt-checkbox": "^2.2.0",
-    "prompt-radio": "^1.2.1"
+    "prompt-radio": "^1.2.1",
+    "write": "^1.0.3"
   },
   "devDependencies": {},
   "scripts": {

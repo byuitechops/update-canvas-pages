@@ -49,6 +49,8 @@ Select your desired option with the arrow keys and space-bar. Press enter when s
  ( ) No
  ```
 
+### Only asks the next two questions if you answer 'Yes' to the full HTML
+
  #### Select if you want to include the ID for the course and pages in the names of folders and files
  ```node
  ? Do you want to include the ID in the folder and file names? 

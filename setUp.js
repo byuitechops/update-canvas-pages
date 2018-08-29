@@ -17,7 +17,6 @@ let settings = settingsFile.length > 0 ? JSON.parse(settingsFile) : {};
 function setUp() {
     return new Promise((resolve, reject) => {
         let defaultDir = path.join(require('os').homedir(), 'Documents', 'courses');
-        console.log(defaultDir);
 
         enquirer.question({
             name: 'API_Key',
@@ -53,7 +52,6 @@ function errorHandling(err) {
 async function main(canvas = require('canvas-api-wrapper')) {
     try {
         let settings = await setUp();
-        // console.log(settings);
         if (!process.env.CANVAS_API_TOKEN) {
             canvas.apiToken = settings.key;
         }

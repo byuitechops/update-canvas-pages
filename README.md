@@ -13,17 +13,16 @@ npm i byuitechops/update-canvas-pages
     1. Download all pages from the course you want to edit
     2. Upload the pages you want to canvas
 
+__Before both options you will have to verify your canvas API token__
+```node
+? What is your API Key?
+```
+
 ### 1. Download course(s)
 
 Downloads all of the pages from the course specified
 ```node
 downloadCanvasPages
-```
-
-#### It will ask for your canvas API token
-
-```node
-? What is your API Key?
 ```
 
 #### Then it will ask where to save the courses
@@ -34,13 +33,35 @@ downloadCanvasPages
 * The course pages will be saved inside their own course folder titled `${course_name}-${course_ID}`
 
 ```node
-? Where will the course to be saved? (Documents/courses)
+? Where will the course to be saved? (C:\Users\${user}\Documents\courses)
 ```
 
 #### Select the course to download with the course ID
 ```node
 ? ID of the course you want to download
 ```
+
+#### Select if you want tags added to make it a full HTML page instead of a snippet.
+Select your desired option with the arrow keys and space-bar. Press enter when selected
+```node
+? Do you want the full HTML for the page?
+>( ) Yes
+ ( ) No
+ ```
+
+ #### Select if you want to include the ID for the course and pages in the names of folders and files
+ ```node
+ ? Do you want to include the ID in the folder and file names? 
+>( ) Yes
+  ( ) No
+ ```
+
+#### Select whether you want to remove the `Link` and `Script` tags from the pages
+```node
+? Do you want the Script and Link tags removed from the page?
+>( ) Yes
+ ( ) No
+ ```
 
 __You can then alter the page HTML however you want because it is saved on your local machine__
 

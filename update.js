@@ -83,7 +83,6 @@ async function getCourseToUpload(homeDir, settings) {
                 }
             });
         courseLocation = path.join(homeDir, enquirer.answers.courseLocation);
-        console.log(courseLocation);
         readableDirContent = fs.readdirSync(courseLocation);
     } catch (err) {
         handleErrors(err);
@@ -135,7 +134,7 @@ async function updatePages(courses) {
         for (let j = 0; j < pagesToUpdate.length; j++) {
             let newHtml = fs.readFileSync(pagesToUpdate[j].location, 'utf8');
 
-            let encoded = he.encode(newHtml);
+            // let encoded = he.encode(newHtml);
             let cleaned = newHtml.replace(/&#160;/g, 'POTATO').replace(/\s/g, '');
 
             console.log(cleaned);

@@ -7,7 +7,6 @@ const cheerio = require('cheerio'),
     setup = require('./setUp.js').main,
     path = require('path'),
     chalk = require('chalk'),
-    handleErrors = require('./setup.js').errorHandling,
     npmWriteFile = require('write'),
     camelCase = require('camelcase'),
     validator = require('validator'),
@@ -15,23 +14,51 @@ const cheerio = require('cheerio'),
     fileExists = require('file-exists');
 enquirer.register('radio', require('prompt-radio'));
 
-function getCourseID() {
+async function getCourseID() {
+    let questionAnswers;
     return new Promise((resolve, reject) => {
-        enquirer.question('course_ID', 'ID of the course you want to download?', {
-        });
+        enquirer.question('course_ID', 'ID of the course you want to download?');
         enquirer.question('fullHtml', 'Do you want the full HTML of the page?', {
-            default: 'no',
             type: 'radio',
             choices: ['Yes', 'No']
         });
-        enquirer.ask()
+        enquirer.question('page_ID', 'Do you want to include the ID in the folder and file names?', {
+            type: 'radio',
+            choices: ['Yes', 'No']
+        });
+        enquirer.question('links', 'Do you want the Script and Link tags removed from the page?', {
+            type: 'radio',
+            choices: ['Yes', 'No']
+        });
+        // If you're asking question based on previous answers
+        enquirer.ask(['course_ID', 'fullHtml'])
+            // // If you want to ask all questions
+            // enquirer.ask()
             .then(answers => {
+                questionAnswers = answers;
+
+                // If we want to ask all the question every time
                 resolve(answers);
+                console.log(answers);
             })
+
+            // // If we want to only ask page-id/links based on the answer of fullHtml
+            // .then(() => {
+            //     if (questionAnswers.fullHtml === 'Yes') {
+            //         enquirer.ask(['page_ID', 'links'])
+            //             .then(answers => {
+            //                 for (let answer in answers) {
+            //                     answer.key = answer.value;
+            //                     resolve(questionAnswers);
+            //                 }
+            //             });
+            //     } else {
+            //         resolve(questionAnswers);
+            //     }
+            // })
             .catch(reject);
     });
 }
-
 
 function verifyPath(coursePath) {
 
@@ -65,15 +92,14 @@ function verifyPath(coursePath) {
     return coursePath;
 }
 
-
 /**
  * 1. Sanitizes fileName
  * 2. Removes spaces and camelCases
  * 3. Either adds course/page ID, or returns just name
  * @param {object} toBeWritten 
  */
-function createFileName(name, number, fullCourse) {
-
+function createFileName(name, number, includeID) {
+    console.log('ID INCLUDED: ', includeID);
     /**
      * Removes characters that are not allowed in URL
      * You can change what is and isn't allowed by changeing `notAllowed`
@@ -87,10 +113,34 @@ function createFileName(name, number, fullCourse) {
 
     let sanitized = sanitizeFileName(name);
     name = `${camelCase(sanitized)}`;
-    console.log(name);
     // This needs to be run if the 'fullcourse' option is selected false
-    if (!fullCourse) name = `${name}-${number}`;
+    if (includeID) name = `${name}-${number}`;
     return name;
+}
+
+function alterHtml(answers, fullCourse, htmlString) {
+    function fixCheerio(htmlString) {
+        var searchAndRemove = ['<html>', '</html>', '<head>', '</head>', '<body>', '</body>'];
+        var regexForTooManyLineBreaks = RegExp(/\n{2,}/g);
+        searchAndRemove.forEach((string) => {
+            if (htmlString.includes(string)) {
+                htmlString = htmlString.replace(string, '');
+            }
+        });
+        if (regexForTooManyLineBreaks.test(htmlString)) {
+            htmlString = htmlString.replace(regexForTooManyLineBreaks, '');
+        }
+    }
+
+    let $ = cheerio.load(htmlString);
+    if (answers.links === 'Yes') {
+        htmlString = $('link, script').remove();
+    }
+    htmlString = $.html();
+    if (!fullCourse) {
+        fixCheerio(htmlString);
+    }
+    return htmlString;
 }
 
 /**
@@ -100,7 +150,6 @@ function createFileName(name, number, fullCourse) {
  */
 function checkContents(page, filePath) {
     return new Promise((resolve, reject) => {
-        console.log(chalk.blue('FILE PATH: '), filePath);
         fileExists(filePath, (err, exists) => {
             if (!exists) {
                 resolve(true);
@@ -118,38 +167,31 @@ function checkContents(page, filePath) {
     });
 }
 
-
 async function main() {
     let dirPath = await setup(canvas);
     let answers = await getCourseID();
     let course_ID = answers.course_ID;
+    let includesID = answers.page_ID === 'No';
     let fullCourse = answers.fullHtml === 'Yes' ? true : false;
     let course = await canvas.getCourse(course_ID).get();
-    let courseName = createFileName(course.course_code, course.id, fullCourse);
+    let courseName = createFileName(course.course_code, course.id, includesID);
     let pages = await course.pages.getComplete();
-    let fullPath = verifyPath(path.join(dirPath, courseName));
-
-    pages.map(page => {
+    let fullPath = verifyPath(path.join(dirPath, courseName)); pages.map(page => {
         let htmlString = page.getHtml();
-        if (fullCourse) {
-            let $ = cheerio.load(htmlString);
-            // Potential if(want the things removed) {run code below};
-            htmlString = $('link, script').remove();
-            htmlString = $.html();
-        }
-        let fileName = createFileName(page.title, page.page_id, fullCourse);
+        htmlString = alterHtml(answers, fullCourse, htmlString);
+        let fileName = createFileName(page.title, page.page_id, includesID);
         let filePath = `${path.join(fullPath, fileName)}.html`;
         checkContents(htmlString, filePath)
             .then(valid => {
                 if (valid) {
                     console.log(chalk.blueBright('Write file'));
                     npmWriteFile(filePath, htmlString);
+                } else {
+                    console.log(chalk.blue('The file already exists and has not been changed'));
                 }
             })
             .catch(err => {
                 console.error(err);
             });
     });
-}
-
-main();
+} main();

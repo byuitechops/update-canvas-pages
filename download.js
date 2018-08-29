@@ -30,32 +30,23 @@ async function getCourseID() {
             type: 'radio',
             choices: ['Yes', 'No']
         });
-        // If you're asking question based on previous answers
         enquirer.ask(['course_ID', 'fullHtml'])
-            // // If you want to ask all questions
-            // enquirer.ask()
             .then(answers => {
                 questionAnswers = answers;
-
-                // If we want to ask all the question every time
-                resolve(answers);
-                console.log(answers);
             })
-
-            // // If we want to only ask page-id/links based on the answer of fullHtml
-            // .then(() => {
-            //     if (questionAnswers.fullHtml === 'Yes') {
-            //         enquirer.ask(['page_ID', 'links'])
-            //             .then(answers => {
-            //                 for (let answer in answers) {
-            //                     answer.key = answer.value;
-            //                     resolve(questionAnswers);
-            //                 }
-            //             });
-            //     } else {
-            //         resolve(questionAnswers);
-            //     }
-            // })
+            .then(() => {
+                if (questionAnswers.fullHtml === 'Yes') {
+                    enquirer.ask(['page_ID', 'links'])
+                        .then(answers => {
+                            for (let answer in answers) {
+                                answer.key = answer.value;
+                                resolve(questionAnswers);
+                            }
+                        });
+                } else {
+                    resolve(questionAnswers);
+                }
+            })
             .catch(reject);
     });
 }
@@ -99,7 +90,7 @@ function verifyPath(coursePath) {
  * @param {object} toBeWritten 
  */
 function createFileName(name, number, includeID) {
-    console.log('ID INCLUDED: ', includeID);
+
     /**
      * Removes characters that are not allowed in URL
      * You can change what is and isn't allowed by changeing `notAllowed`

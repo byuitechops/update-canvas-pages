@@ -46,7 +46,6 @@ async function getCourseID() {
                 } else {
                     questionAnswers.links = 'No';
                     questionAnswers.page_ID = 'Yes';
-                    console.log(questionAnswers);
                     resolve(questionAnswers);
                 }
             })
@@ -166,9 +165,7 @@ async function main() {
     let answers = await getCourseID();
     let course_ID = answers.course_ID;
     let includesID = answers.page_ID === 'Yes';
-    console.log('Includes ID: ', includesID);
     let fullCourse = answers.fullHtml === 'Yes';
-    console.log('fullCourse: ', fullCourse);
     let course = await canvas.getCourse(course_ID).get();
     let courseName = createFileName(course.course_code, course.id, includesID);
     let pages = await course.pages.getComplete();

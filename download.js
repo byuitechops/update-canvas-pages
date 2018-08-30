@@ -15,7 +15,7 @@ const cheerio = require('cheerio'),
 enquirer.register('radio', require('prompt-radio'));
 
 async function getCourseID() {
-    let questionAnswers;
+    // let questionAnswers;
     return new Promise((resolve, reject) => {
         enquirer.question('course_ID', 'ID of the course you want to download?');
         enquirer.question('fullHtml', 'Do you want the full HTML of the page?', {
@@ -26,29 +26,23 @@ async function getCourseID() {
             type: 'radio',
             choices: ['Yes', 'No']
         });
-        enquirer.question('links', 'Do you want the Script and Link tags removed from the page?', {
-            type: 'radio',
-            choices: ['Yes', 'No']
-        });
+        // enquirer.question('links', 'Do you want the Script and Link tags removed from the page?', {
+        //     type: 'radio',
+        //     choices: ['Yes', 'No']
+        // });
         enquirer.ask(['course_ID', 'fullHtml'])
             .then(answers => {
-                questionAnswers = answers;
+                resolve(answers);
             })
-            .then(() => {
-                if (questionAnswers.fullHtml === 'Yes') {
-                    enquirer.ask(['page_ID', 'links'])
-                        .then(answers => {
-                            for (let answer in answers) {
-                                answer.key = answer.value;
-                                resolve(questionAnswers);
-                            }
-                        });
-                } else {
-                    questionAnswers.links = 'No';
-                    questionAnswers.page_ID = 'Yes';
-                    resolve(questionAnswers);
-                }
-            })
+            // .then(() => {
+            // if (questionAnswers.fullHtml === 'Yes') {
+            // enquirer.ask(['page_ID', 'links'])
+            // .then(answers => {
+            //     for (let answer in answers) {
+            //         answer.key = answer.value;
+            //         resolve(questionAnswers);
+            //     }
+            // });
             .catch(reject);
     });
 }
@@ -91,7 +85,7 @@ function verifyPath(coursePath) {
  * 3. Either adds course/page ID, or returns just name
  * @param {object} toBeWritten 
  */
-function createFileName(name, number, includeID) {
+function createFileName(name, number, fullCourse) {
 
     /**
      * Removes characters that are not allowed in URL
@@ -100,39 +94,34 @@ function createFileName(name, number, includeID) {
      * @param {String} fileName 
      */
     function sanitizeFileName(fileName) {
-        let notAllowed = ';/?:@&=+$,';
+        let notAllowed = ';/?:@&=+$,*';
         return validator.blacklist(fileName, notAllowed);
     }
 
     let sanitized = sanitizeFileName(name);
     name = `${camelCase(sanitized)}`;
     // This needs to be run if the 'fullcourse' option is selected false
-    if (includeID) name = `${name}-${number}`;
+    if (!fullCourse) name = `${name}-${number}`;
     return name;
 }
 
-function alterHtml(answers, fullCourse, htmlString) {
-    function fixCheerio(htmlString) {
-        var searchAndRemove = ['<html>', '</html>', '<head>', '</head>', '<body>', '</body>'];
-        var regexForTooManyLineBreaks = RegExp(/\n{2,}/g);
-        searchAndRemove.forEach((string) => {
-            if (htmlString.includes(string)) {
-                htmlString = htmlString.replace(string, '');
-            }
-        });
-        if (regexForTooManyLineBreaks.test(htmlString)) {
-            htmlString = htmlString.replace(regexForTooManyLineBreaks, '');
-        }
-    }
+function alterHtml(htmlString) {
+    // function fixCheerio(htmlString) {
+    //     var searchAndRemove = ['<html>', '</html>', '<head>', '</head>', '<body>', '</body>'];
+    //     var regexForTooManyLineBreaks = RegExp(/\n{2,}/g);
+    //     searchAndRemove.forEach((string) => {
+    //         if (htmlString.includes(string)) {
+    //             htmlString = htmlString.replace(string, '');
+    //         }
+    //     });
+    //     if (regexForTooManyLineBreaks.test(htmlString)) {
+    //         htmlString = htmlString.replace(regexForTooManyLineBreaks, '');
+    //     }
+    // }
 
     let $ = cheerio.load(htmlString);
-    if (answers.links === 'Yes') {
-        htmlString = $('link, script').remove();
-    }
+    htmlString = $('link, script').remove();
     htmlString = $.html();
-    if (!fullCourse) {
-        fixCheerio(htmlString);
-    }
     return htmlString;
 }
 
@@ -164,23 +153,22 @@ async function main() {
     let dirPath = await setup(canvas);
     let answers = await getCourseID();
     let course_ID = answers.course_ID;
-    let includesID = answers.page_ID === 'Yes';
     let fullCourse = answers.fullHtml === 'Yes';
     let course = await canvas.getCourse(course_ID).get();
-    let courseName = createFileName(course.course_code, course.id, includesID);
+    let courseName = createFileName(course.course_code, course.id, fullCourse);
     let pages = await course.pages.getComplete();
     let fullPath = verifyPath(path.join(dirPath, courseName)); pages.map(page => {
         let htmlString = page.getHtml();
-        htmlString = alterHtml(answers, fullCourse, htmlString);
-        let fileName = createFileName(page.title, page.page_id, includesID);
+        if (fullCourse) htmlString = alterHtml(htmlString);
+        let fileName = createFileName(page.title, page.page_id, fullCourse);
         let filePath = `${path.join(fullPath, fileName)}.html`;
         checkContents(htmlString, filePath)
             .then(valid => {
                 if (valid) {
-                    console.log(chalk.blueBright('Write file'));
+                    console.log(chalk.blueBright(`Write file ${fileName}`));
                     npmWriteFile(filePath, htmlString);
                 } else {
-                    console.log(chalk.blue('The file already exists and has not been changed'));
+                    console.log(chalk.blue(`${fileName} already exists and has not been changed`));
                 }
             })
             .catch(err => {

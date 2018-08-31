@@ -3,7 +3,7 @@
 ## Setup
 
 ```node
-npm i byuitechops/update-canvas-pages
+npm i -g byuitechops/update-canvas-pages
 ```
 
 ## Running the program
